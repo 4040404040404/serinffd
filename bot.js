@@ -1,9 +1,9 @@
 /**
- * bot.js — Off-chain arbitrage runner for UniswapV4FlashArbitrage.sol
+ * bot.js — Unconditional flash-arb executor for UniswapV4FlashArbitrage.sol
  *
- * Polls two Uniswap V4 pools every second, estimates the profit of a flash-arb
- * between them, and fires a transaction when the opportunity is net-profitable
- * after gas costs.
+ * Fires flashArb every second without any off-chain profit estimation.
+ * The on-chain contract reverts with NoProfit() when there is nothing to earn,
+ * so no money is ever lost on unprofitable rounds — only gas.
  *
  * Supported networks (set via NETWORK env var):
  *   mainnet  — Ethereum mainnet  (default)
@@ -74,26 +74,14 @@ const RPC_URL      = process.env.RPC_URL      || preset.defaultRpc;
 const PRIVATE_KEY  = process.env.PRIVATE_KEY  || "0xYOUR_PRIVATE_KEY";
 const ARB_CONTRACT = process.env.ARB_CONTRACT || "0xYOUR_DEPLOYED_CONTRACT";
 
-const POOL_MANAGER = preset.poolManager;
-
-// Decimals of the token being borrowed and profited in (TOKEN_IN).
-// Adjust to match the actual token — WETH is 18, USDC is 6, etc.
-const TOKEN_IN_DECIMALS = 18;
-
-// Flash-borrow size expressed in TOKEN_IN units.
-// Tune this based on available pool liquidity to maximise profit.
+// Flash-borrow size expressed in TOKEN_IN units (WETH, 18 decimals).
+// Tune this based on available pool liquidity.
 // Use a small amount on testnet (0.01 WETH) to reduce faucet pressure.
 const BORROW_AMOUNT = NETWORK === "mainnet"
-  ? ethers.parseUnits("1",    TOKEN_IN_DECIMALS)   // 1 WETH on mainnet
-  : ethers.parseUnits("0.01", TOKEN_IN_DECIMALS);  // 0.01 WETH on testnet
+  ? ethers.parseUnits("1",    18)   // 1 WETH on mainnet
+  : ethers.parseUnits("0.01", 18);  // 0.01 WETH on testnet
 
-// Minimum profit in TOKEN_IN units after estimated gas before firing a tx.
-// Relax the threshold on testnet so arb fires even with low price spreads.
-const MIN_PROFIT_WEI = NETWORK === "mainnet"
-  ? ethers.parseUnits("0.001",  TOKEN_IN_DECIMALS)  // 0.001 WETH on mainnet
-  : ethers.parseUnits("0.0001", TOKEN_IN_DECIMALS); // 0.0001 WETH on testnet
-
-// Polling interval in milliseconds.
+// Execution interval in milliseconds.
 const POLL_INTERVAL_MS = 1000; // 1 second
 
 // ── Pool configuration ────────────────────────────────────────────────────────
@@ -132,12 +120,6 @@ const TOKEN_OUT = USDC;
 
 // ── ABIs ──────────────────────────────────────────────────────────────────────
 
-const POOL_MANAGER_ABI = [
-  // getSlot0 returns the current sqrt price and tick for a pool.
-  // The poolId is keccak256(abi.encode(PoolKey)).
-  "function getSlot0(bytes32 id) external view returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)",
-];
-
 // PoolKey tuple type used throughout the ABI.
 const POOL_KEY_TYPE = "(address currency0, address currency1, uint24 fee, int24 tickSpacing, address hooks)";
 
@@ -160,61 +142,18 @@ function poolId(key) {
   );
 }
 
-/**
- * Convert a sqrtPriceX96 value to a human-readable price ratio.
- * price = (sqrtPriceX96 / 2^96)^2
- */
-function sqrtPriceToPrice(sqrtPriceX96) {
-  const Q96 = 2n ** 96n;
-  const ratio = (sqrtPriceX96 * sqrtPriceX96) / (Q96 * Q96);
-  return ratio;
-}
-
-/**
- * Estimate the output of an exact-input swap using the constant-product
- * approximation: amountOut ≈ amountIn * price / (1 + fee/1e6).
- *
- * This is a rough estimate for opportunity detection only — the actual on-chain
- * swap result will differ due to price impact.
- */
-function estimateAmountOut(sqrtPriceX96, amountIn, zeroForOne, feePips) {
-  const Q96 = 2n ** 96n;
-  // price = token1 per token0
-  const numerator   = sqrtPriceX96 * sqrtPriceX96;
-  const denominator = Q96 * Q96;
-
-  let amountOut;
-  if (zeroForOne) {
-    // selling token0 for token1: amountOut = amountIn * price
-    amountOut = (BigInt(amountIn) * numerator) / denominator;
-  } else {
-    // selling token1 for token0: amountOut = amountIn / price
-    amountOut = (BigInt(amountIn) * denominator) / numerator;
-  }
-
-  // Deduct the pool fee
-  amountOut = (amountOut * BigInt(1e6 - feePips)) / BigInt(1e6);
-  return amountOut;
-}
-
 // ── Main loop ─────────────────────────────────────────────────────────────────
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(RPC_URL);
   const wallet   = new ethers.Wallet(PRIVATE_KEY, provider);
 
-  const pmContract  = new ethers.Contract(POOL_MANAGER, POOL_MANAGER_ABI, provider);
   const arbContract = new ethers.Contract(ARB_CONTRACT, ARB_ABI, wallet);
 
   const id0 = poolId(pool0Key);
   const id1 = poolId(pool1Key);
 
-  const zeroForOne0 = TOKEN_IN.toLowerCase() === CURRENCY0.toLowerCase();
-  // On pool1 we INPUT tokenOut and OUTPUT tokenIn.
-  // zeroForOne means "are we selling currency0?", so we check the INPUT side (TOKEN_OUT).
-  const zeroForOne1 = TOKEN_OUT.toLowerCase() === CURRENCY0.toLowerCase();
-
-  console.log(`Arb bot started. Polling every ${POLL_INTERVAL_MS} ms.`);
+  console.log(`Arb bot started. Firing flashArb every ${POLL_INTERVAL_MS} ms (no detection).`);
   console.log(`pool0 id: ${id0}`);
   console.log(`pool1 id: ${id1}`);
 
@@ -222,46 +161,10 @@ async function main() {
 
   async function tick() {
     try {
-      // Fetch current sqrt prices from both pools in parallel.
-      const [slot0_0, slot0_1] = await Promise.all([
-        pmContract.getSlot0(id0),
-        pmContract.getSlot0(id1),
-      ]);
+      const feeData = await provider.getFeeData();
+      const gasLimit = 350000n;
 
-      const sqrtPrice0 = slot0_0.sqrtPriceX96;
-      const sqrtPrice1 = slot0_1.sqrtPriceX96;
-
-      // Estimate: borrow BORROW_AMOUNT of tokenIn, swap to tokenOut on pool0,
-      // swap back to tokenIn on pool1.
-      const amountOut0 = estimateAmountOut(
-        sqrtPrice0, BORROW_AMOUNT, zeroForOne0, pool0Key.fee
-      );
-      const amountBack = estimateAmountOut(
-        sqrtPrice1, amountOut0, zeroForOne1, pool1Key.fee
-      );
-
-      const estimatedProfit = amountBack - BigInt(BORROW_AMOUNT);
-
-      console.log(
-        `[${new Date().toISOString()}] ` +
-        `sqrtP0=${sqrtPrice0} sqrtP1=${sqrtPrice1} ` +
-        `est. profit=${ethers.formatUnits(estimatedProfit, TOKEN_IN_DECIMALS)} tokenIn`
-      );
-
-      if (estimatedProfit <= 0n) return; // not profitable, skip
-
-      // Rough gas estimate: flash arb typically uses ~300k gas.
-      const feeData     = await provider.getFeeData();
-      const gasPrice    = feeData.maxFeePerGas ?? feeData.gasPrice ?? 0n;
-      const gasLimit    = 350000n;
-      const gasCostWei  = gasPrice * gasLimit;
-
-      if (estimatedProfit < gasCostWei + MIN_PROFIT_WEI) {
-        console.log("  ↳ opportunity below min-profit threshold after gas, skipping.");
-        return;
-      }
-
-      console.log(`  ↳ FIRING TRANSACTION (est. profit ${ethers.formatUnits(estimatedProfit, TOKEN_IN_DECIMALS)})`);
+      console.log(`[${new Date().toISOString()}] Firing flashArb…`);
 
       const tx = await arbContract.flashArb(
         pool0Key,
@@ -295,6 +198,10 @@ async function main() {
       });
     } catch (err) {
       console.error(`tick error: ${err.message}`);
+      // Resync nonce on send failure (e.g. nonce too low).
+      provider.getTransactionCount(wallet.address, "latest").then((n) => {
+        lastNonce = n;
+      }).catch(() => {});
     }
   }
 

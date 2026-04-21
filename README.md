@@ -22,18 +22,18 @@ Borrow any token for free inside a single transaction, exploit price differences
 
 ## 1. How it works
 
+The bot fires `flashArb` unconditionally every second. The contract handles the no-profit case:
+
 ```
-flashArb()  ──►  PoolManager.unlock()
-                       │
-                       ▼
-               unlockCallback()  (atomic, inside one tx)
-                  │
-                  ├─ 1. take(tokenIn, amount)        ← free flash borrow
-                  ├─ 2. swap pool0: tokenIn → tokenOut
-                  ├─ 3. swap pool1: tokenOut → tokenIn
-                  ├─ 4. guard: revert if amountBack ≤ amount
-                  ├─ 5. settle(tokenIn, amount)       ← repay flash loan
-                  └─ 6. transfer profit to caller
+bot (every 1 s)  ──►  flashArb()
+                           │
+                           ▼ (on-chain, atomic)
+                   unlockCallback()
+                       ├─ borrow tokenIn
+                       ├─ swap pool0: tokenIn → tokenOut
+                       ├─ swap pool1: tokenOut → tokenIn
+                       ├─ amountBack > amount?  ✓ transfer profit
+                       └─ amountBack ≤ amount?  ✗ revert NoProfit()
 ```
 
 **Key insight — V4 flash loans are free.**  
@@ -51,7 +51,7 @@ Uniswap V4 uses *flash accounting*: the PoolManager tracks token deltas per call
 | `ref.sol` | Reference: equivalent Uniswap **V3** flash-swap (for comparison) |
 | `ref(part2)` | Forge test for the V3 reference contract |
 | `deploy.js` | Compile + deploy `UniswapV4FlashArbitrage` (mainnet or testnet) |
-| `bot.js` | Off-chain polling bot — detects arb and fires `flashArb` |
+| `bot.js` | Off-chain executor — fires `flashArb` unconditionally every second |
 
 ---
 
@@ -154,20 +154,16 @@ RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY \
 node bot.js
 ```
 
-The bot polls both pools every second and logs price data:
+The bot fires `flashArb` every second without any off-chain price checks. The contract reverts atomically with `NoProfit()` when there is nothing to earn, so no principal is ever at risk — only the gas cost of the reverted transaction.
 
 ```
-Arb bot started. Polling every 1000 ms.
-pool0 id: 0xabc...
-pool1 id: 0xdef...
-[2026-04-21T12:00:00.000Z] sqrtP0=... sqrtP1=... est. profit=0.0000 tokenIn
-[2026-04-21T12:00:01.000Z] sqrtP0=... sqrtP1=... est. profit=0.0001 tokenIn
-  ↳ FIRING TRANSACTION (est. profit 0.00015)
+[2026-04-21T12:00:00.000Z] Firing flashArb…
   ↳ tx sent: 0x123...
-  ↳ confirmed in block 7654322 (status=success)
+  ↳ confirmed in block 7654322 (status=reverted)
+[2026-04-21T12:00:01.000Z] Firing flashArb…
+  ↳ tx sent: 0x456...
+  ↳ confirmed in block 7654323 (status=success)
 ```
-
-> **Testnet note:** Testnet pools often have little liquidity and small price spreads. The bot uses a lower borrow amount (`0.01 WETH`) and profit threshold (`0.0001 WETH`) on Sepolia so it will fire more easily for testing.
 
 ---
 
@@ -201,17 +197,12 @@ node deploy.js
 
 ### Tuning parameters
 
-Open `bot.js` and adjust these constants to match your strategy and token pair:
+Open `bot.js` and adjust the borrow amount to match your strategy and token pair:
 
 ```js
 // How much to borrow per arb attempt (affects price impact)
-const BORROW_AMOUNT = ethers.parseUnits("1", TOKEN_IN_DECIMALS);
-
-// Minimum profit after gas before firing a transaction
-const MIN_PROFIT_WEI = ethers.parseUnits("0.001", TOKEN_IN_DECIMALS);
-
-// How often to poll (milliseconds)
-const POLL_INTERVAL_MS = 1000;
+const BORROW_AMOUNT = ethers.parseUnits("1", 18);   // mainnet
+const BORROW_AMOUNT = ethers.parseUnits("0.01", 18); // testnet
 ```
 
 ### Changing the token pair / pools
@@ -325,11 +316,10 @@ Fund your wallet with testnet ETH from a faucet before deploying.
 Your `RPC_URL` points to a different network than `NETWORK`. Double-check both env vars.
 
 **`NoProfit()` revert**  
-The on-chain swap result was worse than the off-chain estimate. Normal on low-liquidity testnet pools — the price moved or the estimate was too optimistic. Tune `BORROW_AMOUNT` down to reduce price impact.
+The on-chain swap result returned ≤ the borrowed amount. This is the normal outcome when there is no spread — the tx reverts and no principal is lost. Only the gas fee is spent. Tune `BORROW_AMOUNT` to reduce price impact.
 
-**Bot never fires**  
-- `est. profit` is consistently ≤ 0 → no real spread exists between the pools at the moment.  
-- `opportunity below min-profit threshold after gas` → spread is there but too small; lower `MIN_PROFIT_WEI` for testnet experimentation.
+**Bot fires every second and all txs revert**  
+No price spread currently exists between the two pools. This is expected — the bot relies on the contract's `NoProfit()` guard rather than off-chain detection. You can point the bot at pools with known imbalances to verify it works.
 
 **`solc` not found**  
 Run `npm install solc` in the project directory.
