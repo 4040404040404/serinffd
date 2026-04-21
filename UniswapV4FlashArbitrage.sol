@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-// Uniswap V4 PoolManager on Ethereum mainnet
-address constant POOL_MANAGER = 0x000000000004444c5dc75cB358380D2e3dE08A90;
+// Known PoolManager deployments — pass the appropriate address to the constructor.
+//
+//   Ethereum Mainnet : 0x000000000004444c5dc75cB358380D2e3dE08A90
+//   Sepolia testnet  : 0x8C4BcBE6b9eF47855f97E675296FA3F6fafa5F1A
+//
+// See deploy.js for a ready-to-use deployment script.
 
 // Sqrt price boundary constants (same values used in swapuniswapV4.sol)
 uint160 constant MIN_SQRT_PRICE = 4295128739;
@@ -21,15 +25,18 @@ uint160 constant MAX_SQRT_PRICE = 1461446703485210103287273052203988822378723970
 /// tokenIn than was borrowed, so no capital is ever at risk.
 ///
 /// Off-chain usage: call `flashArb` from a bot whenever a price discrepancy
-/// between the two pools is detected.  See bot.js for a reference runner.
+/// between the two pools is detected.  See bot.js / deploy.js for helpers.
 contract UniswapV4FlashArbitrage is IUnlockCallback {
     IPoolManager public immutable poolManager;
 
     error NotPoolManager();
     error NoProfit();
 
-    constructor() {
-        poolManager = IPoolManager(POOL_MANAGER);
+    /// @param _poolManager Address of the V4 PoolManager for the target network.
+    ///        Mainnet  : 0x000000000004444c5dc75cB358380D2e3dE08A90
+    ///        Sepolia  : 0x8C4BcBE6b9eF47855f97E675296FA3F6fafa5F1A
+    constructor(address _poolManager) {
+        poolManager = IPoolManager(_poolManager);
     }
 
     // ── Data passed through unlock → unlockCallback ───────────────────────────

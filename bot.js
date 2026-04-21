@@ -5,13 +5,18 @@
  * between them, and fires a transaction when the opportunity is net-profitable
  * after gas costs.
  *
+ * Supported networks (set via NETWORK env var):
+ *   mainnet  — Ethereum mainnet  (default)
+ *   sepolia  — Sepolia testnet   (for testing)
+ *
  * Requirements:
  *   npm install ethers
  *
  * Usage:
- *   ARB_CONTRACT=0x...  \
- *   PRIVATE_KEY=0x...   \
- *   RPC_URL=https://...  \
+ *   NETWORK=sepolia          \
+ *   ARB_CONTRACT=0x...       \
+ *   PRIVATE_KEY=0x...        \
+ *   RPC_URL=https://...      \
  *   node bot.js
  */
 
@@ -19,13 +24,57 @@
 
 const { ethers } = require("ethers");
 
+// ── Network presets ───────────────────────────────────────────────────────────
+//
+// Each preset provides:
+//   poolManager  – V4 PoolManager address on that network
+//   weth         – Wrapped-ether token address
+//   usdc         – USD-denominated stablecoin address
+//   pool0Fee     – Fee tier (in pips) for pool0
+//   pool0Tick    – tickSpacing matching pool0Fee
+//   pool1Fee     – Fee tier (in pips) for pool1
+//   pool1Tick    – tickSpacing matching pool1Fee
+//   defaultRpc   – Fallback RPC when RPC_URL is not set
+//
+// WETH/USDC 0.05 % vs 0.30 % is used as the example arb pair on both networks.
+// Replace with whichever pair has sufficient liquidity on Sepolia.
+
+const NETWORK_PRESETS = {
+  mainnet: {
+    poolManager: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+    weth:        "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    usdc:        "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    pool0Fee:    500,   pool0Tick: 10,
+    pool1Fee:    3000,  pool1Tick: 60,
+    defaultRpc:  "https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY",
+  },
+  sepolia: {
+    // V4 PoolManager on Sepolia (Uniswap official deployment)
+    poolManager: "0x8C4BcBE6b9eF47855f97E675296FA3F6fafa5F1A",
+    // Uniswap-wrapped WETH on Sepolia
+    weth:        "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+    // Circle USDC on Sepolia
+    usdc:        "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    pool0Fee:    500,   pool0Tick: 10,
+    pool1Fee:    3000,  pool1Tick: 60,
+    defaultRpc:  "https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY",
+  },
+};
+
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const RPC_URL      = process.env.RPC_URL      || "https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY";
+const NETWORK     = process.env.NETWORK      || "mainnet";
+const preset      = NETWORK_PRESETS[NETWORK];
+if (!preset) {
+  console.error(`Unknown NETWORK="${NETWORK}". Valid options: ${Object.keys(NETWORK_PRESETS).join(", ")}`);
+  process.exit(1);
+}
+
+const RPC_URL      = process.env.RPC_URL      || preset.defaultRpc;
 const PRIVATE_KEY  = process.env.PRIVATE_KEY  || "0xYOUR_PRIVATE_KEY";
 const ARB_CONTRACT = process.env.ARB_CONTRACT || "0xYOUR_DEPLOYED_CONTRACT";
 
-const POOL_MANAGER = "0x000000000004444c5dc75cB358380D2e3dE08A90";
+const POOL_MANAGER = preset.poolManager;
 
 // Decimals of the token being borrowed and profited in (TOKEN_IN).
 // Adjust to match the actual token — WETH is 18, USDC is 6, etc.
@@ -33,44 +82,47 @@ const TOKEN_IN_DECIMALS = 18;
 
 // Flash-borrow size expressed in TOKEN_IN units.
 // Tune this based on available pool liquidity to maximise profit.
-const BORROW_AMOUNT = ethers.parseUnits("1", TOKEN_IN_DECIMALS); // e.g. 1 WETH
+// Use a small amount on testnet (0.01 WETH) to reduce faucet pressure.
+const BORROW_AMOUNT = NETWORK === "mainnet"
+  ? ethers.parseUnits("1",    TOKEN_IN_DECIMALS)   // 1 WETH on mainnet
+  : ethers.parseUnits("0.01", TOKEN_IN_DECIMALS);  // 0.01 WETH on testnet
 
 // Minimum profit in TOKEN_IN units after estimated gas before firing a tx.
-const MIN_PROFIT_WEI = ethers.parseUnits("0.001", TOKEN_IN_DECIMALS); // e.g. 0.001 WETH
+// Relax the threshold on testnet so arb fires even with low price spreads.
+const MIN_PROFIT_WEI = NETWORK === "mainnet"
+  ? ethers.parseUnits("0.001",  TOKEN_IN_DECIMALS)  // 0.001 WETH on mainnet
+  : ethers.parseUnits("0.0001", TOKEN_IN_DECIMALS); // 0.0001 WETH on testnet
 
 // Polling interval in milliseconds.
 const POLL_INTERVAL_MS = 1000; // 1 second
 
 // ── Pool configuration ────────────────────────────────────────────────────────
 //
-// Fill in the two pools you want to arb between.
 // currency0 MUST be the lexicographically smaller address (V4 invariant).
 // Both pools must share the same tokenIn / tokenOut pair.
-//
-// Example: WETH/USDC 0.05% vs WETH/USDC 0.3%
 
-const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const WETH = preset.weth;
+const USDC = preset.usdc;
 
-// currency0 < currency1 by address value
+// Sort to satisfy V4's canonical currency0 < currency1 ordering.
 const [CURRENCY0, CURRENCY1] = [WETH, USDC].sort((a, b) =>
   a.toLowerCase() < b.toLowerCase() ? -1 : 1
 );
 
 const pool0Key = {
-  currency0: CURRENCY0,
-  currency1: CURRENCY1,
-  fee: 500,          // 0.05%
-  tickSpacing: 10,
-  hooks: ethers.ZeroAddress,
+  currency0:   CURRENCY0,
+  currency1:   CURRENCY1,
+  fee:         preset.pool0Fee,
+  tickSpacing: preset.pool0Tick,
+  hooks:       ethers.ZeroAddress,
 };
 
 const pool1Key = {
-  currency0: CURRENCY0,
-  currency1: CURRENCY1,
-  fee: 3000,         // 0.30%
-  tickSpacing: 60,
-  hooks: ethers.ZeroAddress,
+  currency0:   CURRENCY0,
+  currency1:   CURRENCY1,
+  fee:         preset.pool1Fee,
+  tickSpacing: preset.pool1Tick,
+  hooks:       ethers.ZeroAddress,
 };
 
 // tokenIn: the token we borrow and profit in
