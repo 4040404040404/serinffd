@@ -1,0 +1,25 @@
+[profile.default]
+src      = "."
+test     = "."
+out      = "out"
+libs     = ["lib"]
+remappings = []
+
+# ── Solidity ────────────────────────────────────────────────────────────────
+solc_version = "0.8.26"
+optimizer    = true
+optimizer_runs = 200
+
+# ── Fork / RPC ──────────────────────────────────────────────────────────────
+# Set MAINNET_RPC_URL in your shell before running tests:
+#   export MAINNET_RPC_URL="https://mainnet.infura.io/v3/<key>"
+# or put it in a .env file and run: source .env && forge test ...
+[rpc_endpoints]
+mainnet = "${MAINNET_RPC_URL}"
+
+# ── Test configuration ───────────────────────────────────────────────────────
+[profile.default.fuzz]
+runs = 64
+
+# ── Dependencies (install with) ──────────────────────────────────────────────
+#   forge install foundry-rs/forge-std --no-commit
