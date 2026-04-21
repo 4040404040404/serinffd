@@ -67,7 +67,9 @@ contract UniswapV4FlashArbTest is Test, IUnlockCallback {
 
     // DAI amount used for the arb (100 DAI)
     uint256 private constant ARB_AMOUNT = 100e18;
-    // WETH amount used to imbalance pool0 (500 WETH)
+    // WETH amount used to imbalance pool0.
+    // 500 WETH is large enough to move the price several ticks on a typical
+    // DAI/WETH 0.3 % V4 pool, creating a measurable spread vs the 0.05 % pool.
     uint256 private constant IMBALANCE_WETH = 500e18;
 
     // Flag distinguishing the setup-imbalance callback from unexpected calls

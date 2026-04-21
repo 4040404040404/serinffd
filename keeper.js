@@ -5,7 +5,7 @@
  * What it does
  * ─────────────
  * Calls flashArb() on the deployed UniswapV4FlashArb contract every
- * POLL_INTERVAL_MS milliseconds (default: 1 000 ms = 1 second).
+ * POLL_INTERVAL_MS milliseconds (default: 1000 ms = 1 second).
  *
  * Two operating modes (set BLIND_MODE env var):
  *   BLIND_MODE=true   Call flashArb() unconditionally every tick.
@@ -63,15 +63,18 @@ const config = {
   outputToken:    process.env.OUTPUT_TOKEN      || "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
   amountIn:       BigInt(process.env.AMOUNT_IN  || "100000000000000000000"), // 100 DAI
 
-  pool0Fee:       Number(process.env.POOL0_FEE  || 3000),
-  pool0Tick:      Number(process.env.POOL0_TICK || 60),
-  pool1Fee:       Number(process.env.POOL1_FEE  || 500),
-  pool1Tick:      Number(process.env.POOL1_TICK || 10),
+  // Pool fee in hundredths of a bip (e.g. 3000 = 0.3 %) and tick spacing
+  pool0FeeBips:       Number(process.env.POOL0_FEE  || 3000),
+  pool0TickSpacing:   Number(process.env.POOL0_TICK || 60),
+  pool1FeeBips:       Number(process.env.POOL1_FEE  || 500),
+  pool1TickSpacing:   Number(process.env.POOL1_TICK || 10),
   hooks:          process.env.HOOKS             || ethers.ZeroAddress,
 
   pollIntervalMs: Number(process.env.POLL_INTERVAL_MS || 1000),
   blindMode:     (process.env.BLIND_MODE        || "false") === "true",
   maxGasGwei:     Number(process.env.MAX_GAS_GWEI || 50),
+  // Gas limit for flashArb() — covers two V4 swaps + flash accounting overhead
+  arbGasLimit:    BigInt(process.env.ARB_GAS_LIMIT || 800_000),
 };
 
 // ── ABI (only the functions we need) ────────────────────────────────────────
@@ -138,8 +141,8 @@ async function main() {
   const wallet   = new ethers.Wallet(config.privateKey, provider);
   const contract = new ethers.Contract(config.arbContract, ARB_ABI, wallet);
 
-  const pool0 = buildPoolKey(config.pool0Fee, config.pool0Tick);
-  const pool1 = buildPoolKey(config.pool1Fee, config.pool1Tick);
+  const pool0 = buildPoolKey(config.pool0FeeBips, config.pool0TickSpacing);
+  const pool1 = buildPoolKey(config.pool1FeeBips, config.pool1TickSpacing);
 
   console.log("═══════════════════════════════════════════════════════");
   console.log(" UniswapV4FlashArb Keeper");
@@ -177,14 +180,16 @@ async function main() {
         try {
           await contract.flashArb.staticCall(...callArgs);
         } catch (simErr) {
-          console.log(`[${ts}] #${tick} SIM_REVERT — ${_shortErr(simErr)}`);
+          // Log the full revert reason (e.g. NoProfit details) at debug level
+          const reason = simErr?.reason || simErr?.shortMessage || simErr?.message || String(simErr);
+          console.log(`[${ts}] #${tick} SIM_REVERT — ${reason}`);
           return;
         }
       }
 
       // ── Submit transaction ───────────────────────────────────────────
       const tx = await contract.flashArb(...callArgs, {
-        gasLimit: 800_000n,
+        gasLimit: config.arbGasLimit,
         maxFeePerGas:         feeData.maxFeePerGas,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
       });

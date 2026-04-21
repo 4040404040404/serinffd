@@ -39,7 +39,9 @@ pragma solidity ^0.8.26;
 //  Deploy once, then call flashArb() from an off-chain keeper (see keeper.js).
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── Uniswap V4 PoolManager (Ethereum mainnet) ──────────────────────────────
+// ── Uniswap V4 PoolManager ─────────────────────────────────────────────────
+// MAINNET ONLY — for any other network look up the canonical PoolManager
+// address at https://docs.uniswap.org/contracts/v4/deployments
 address constant POOL_MANAGER = 0x000000000004444c5dc75cB358380D2e3dE08A90;
 
 // ── Sqrt-price limits: allow full price range (capture all positive slippage)
