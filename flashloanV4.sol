@@ -1,6 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+// Currency is an address wrapper (address(0) = native ETH)
+type Currency is address;
+
+library CurrencyLibrary {
+    function unwrap(Currency currency) internal pure returns (address) {
+        return Currency.unwrap(currency);
+    }
+}
+
+using CurrencyLibrary for Currency;
+
+interface IPoolManager {
+    function unlock(bytes calldata data) external returns (bytes memory);
+    function settle(Currency currency) external payable returns (uint256);
+    function take(Currency currency, address to, uint256 amount) external;
+}
+
+interface IUnlockCallback {
+    function unlockCallback(bytes calldata data) external returns (bytes memory);
+}
+
+interface IERC20 {
+    function transfer(address recipient, uint256 amount)
+        external
+        returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+}
+
 // Uniswap V4 PoolManager on Ethereum mainnet
 address constant POOL_MANAGER = 0x000000000004444c5dc75cB358380D2e3dE08A90;
 
@@ -100,32 +128,4 @@ contract UniswapV4Flash is IUnlockCallback {
         address sender;
         bytes data;
     }
-}
-
-// Currency is an address wrapper (address(0) = native ETH)
-type Currency is address;
-
-library CurrencyLibrary {
-    function unwrap(Currency currency) internal pure returns (address) {
-        return Currency.unwrap(currency);
-    }
-}
-
-using CurrencyLibrary for Currency;
-
-interface IPoolManager {
-    function unlock(bytes calldata data) external returns (bytes memory);
-    function settle(Currency currency) external payable returns (uint256);
-    function take(Currency currency, address to, uint256 amount) external;
-}
-
-interface IUnlockCallback {
-    function unlockCallback(bytes calldata data) external returns (bytes memory);
-}
-
-interface IERC20 {
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
-    function balanceOf(address account) external view returns (uint256);
 }
