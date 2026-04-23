@@ -63,7 +63,7 @@ const NETWORK_PRESETS = {
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const NETWORK     = process.env.NETWORK      || "mainnet";
+const NETWORK     = process.env.NETWORK      || "sepolia";
 const preset      = NETWORK_PRESETS[NETWORK];
 if (!preset) {
   console.error(`Unknown NETWORK="${NETWORK}". Valid options: ${Object.keys(NETWORK_PRESETS).join(", ")}`);
