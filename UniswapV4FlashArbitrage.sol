@@ -8,6 +8,72 @@ pragma solidity ^0.8.26;
 //
 // See deploy.js for a ready-to-use deployment script.
 
+// ── Types & libraries ─────────────────────────────────────────────────────────
+
+// Currency wraps an address; address(0) represents native ETH.
+type Currency is address;
+
+library CurrencyLibrary {
+    function unwrap(Currency currency) internal pure returns (address) {
+        return Currency.unwrap(currency);
+    }
+}
+
+using CurrencyLibrary for Currency;
+
+// PoolKey uniquely identifies a V4 pool.
+struct PoolKey {
+    Currency currency0;  // lower address token (canonical ordering)
+    Currency currency1;  // higher address token
+    uint24 fee;          // pool swap fee in hundredths of a bip
+    int24 tickSpacing;   // minimum tick spacing for the pool
+    address hooks;       // hook contract (address(0) if none)
+}
+
+// BalanceDelta encodes two int128 amounts packed into one int256.
+// Negative = caller owes the pool.  Positive = pool owes the caller.
+type BalanceDelta is int256;
+
+library BalanceDeltaLibrary {
+    function amount0(BalanceDelta delta) internal pure returns (int128) {
+        return int128(int256(BalanceDelta.unwrap(delta) >> 128));
+    }
+
+    function amount1(BalanceDelta delta) internal pure returns (int128) {
+        return int128(int256(BalanceDelta.unwrap(delta)));
+    }
+}
+
+using BalanceDeltaLibrary for BalanceDelta;
+
+// ── Interfaces ────────────────────────────────────────────────────────────────
+
+interface IPoolManager {
+    struct SwapParams {
+        bool zeroForOne;
+        int256 amountSpecified;    // negative = exact input, positive = exact output
+        uint160 sqrtPriceLimitX96;
+    }
+
+    function unlock(bytes calldata data) external returns (bytes memory);
+    function swap(
+        PoolKey memory key,
+        SwapParams memory params,
+        bytes calldata hookData
+    ) external returns (BalanceDelta);
+    function settle(Currency currency) external payable returns (uint256);
+    function take(Currency currency, address to, uint256 amount) external;
+}
+
+interface IUnlockCallback {
+    function unlockCallback(bytes calldata data) external returns (bytes memory);
+}
+
+interface IERC20 {
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+}
+
 // Sqrt price boundary constants (same values used in swapuniswapV4.sol)
 uint160 constant MIN_SQRT_PRICE = 4295128739;
 uint160 constant MAX_SQRT_PRICE = 1461446703485210103287273052203988822378723970342;
@@ -187,70 +253,4 @@ contract UniswapV4FlashArbitrage is IUnlockCallback {
 
     // Allow the contract to receive ETH (needed for native-currency pools).
     receive() external payable {}
-}
-
-// ── Types & libraries (mirrored from swapuniswapV4.sol) ───────────────────────
-
-// Currency wraps an address; address(0) represents native ETH.
-type Currency is address;
-
-library CurrencyLibrary {
-    function unwrap(Currency currency) internal pure returns (address) {
-        return Currency.unwrap(currency);
-    }
-}
-
-using CurrencyLibrary for Currency;
-
-// PoolKey uniquely identifies a V4 pool.
-struct PoolKey {
-    Currency currency0;  // lower address token (canonical ordering)
-    Currency currency1;  // higher address token
-    uint24 fee;          // pool swap fee in hundredths of a bip
-    int24 tickSpacing;   // minimum tick spacing for the pool
-    address hooks;       // hook contract (address(0) if none)
-}
-
-// BalanceDelta encodes two int128 amounts packed into one int256.
-// Negative = caller owes the pool.  Positive = pool owes the caller.
-type BalanceDelta is int256;
-
-library BalanceDeltaLibrary {
-    function amount0(BalanceDelta delta) internal pure returns (int128) {
-        return int128(int256(BalanceDelta.unwrap(delta) >> 128));
-    }
-
-    function amount1(BalanceDelta delta) internal pure returns (int128) {
-        return int128(int256(BalanceDelta.unwrap(delta)));
-    }
-}
-
-using BalanceDeltaLibrary for BalanceDelta;
-
-// ── Interfaces ────────────────────────────────────────────────────────────────
-
-interface IPoolManager {
-    struct SwapParams {
-        bool zeroForOne;
-        int256 amountSpecified;    // negative = exact input, positive = exact output
-        uint160 sqrtPriceLimitX96;
-    }
-
-    function unlock(bytes calldata data) external returns (bytes memory);
-    function swap(
-        PoolKey memory key,
-        SwapParams memory params,
-        bytes calldata hookData
-    ) external returns (BalanceDelta);
-    function settle(Currency currency) external payable returns (uint256);
-    function take(Currency currency, address to, uint256 amount) external;
-}
-
-interface IUnlockCallback {
-    function unlockCallback(bytes calldata data) external returns (bytes memory);
-}
-
-interface IERC20 {
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
 }
