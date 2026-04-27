@@ -9,9 +9,10 @@ address constant AAVE_ADDR_PROVIDER = 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 uint256 constant MAX_LEVERAGE_LOOPS = 10;
-uint256 constant LTV_SAFETY_BPS     = 9000;  // borrow 90 % of available per iteration
+uint256 constant LTV_SAFETY_BPS     = 9000;  // borrow 90% of available per iteration
 uint256 constant MIN_HF             = 12e17; // stop leveraging at health-factor 1.2
 uint256 constant BPS                = 10_000;
+uint256 constant DEBT_BUFFER_BPS    = 10_100; // 101% — 1% over-estimate covers rounding when repaying debt
 
 /**
  * @title  FlashArbLeverage
@@ -135,12 +136,14 @@ contract FlashArbLeverage is IUnlockCallback {
      *      then does a final full withdrawal.
      */
     function unwindPosition(address token) external onlyOwner {
+        // +2 extra iterations to handle rounding/dust that may require additional
+        // partial repayments before debt fully reaches zero.
         for (uint256 i; i < MAX_LEVERAGE_LOOPS + 2; ++i) {
             (, uint256 totalDebtBase,,,,) = aavePool.getUserAccountData(address(this));
             if (totalDebtBase == 0) break;
 
             // Convert base-currency debt to token units (+1 % buffer)
-            uint256 debtTokenAmt = (_baseToToken(token, totalDebtBase) * 10_100) / BPS;
+            uint256 debtTokenAmt = (_baseToToken(token, totalDebtBase) * DEBT_BUFFER_BPS) / BPS;
 
             try aavePool.withdraw(token, debtTokenAmt, address(this))
                 returns (uint256 withdrawn)
@@ -197,7 +200,8 @@ contract FlashArbLeverage is IUnlockCallback {
         }
 
         // ── Step 4: repay Uniswap V4 flash loan (fee = 0) ────────────────────
-        IERC20(arb.tokenIn).transfer(address(poolManager), arb.flashAmount);
+        bool ok = IERC20(arb.tokenIn).transfer(address(poolManager), arb.flashAmount);
+        require(ok, "FlashArbLeverage: repay transfer failed");
         poolManager.settle(currency);
 
         return bytes("");
@@ -211,7 +215,7 @@ contract FlashArbLeverage is IUnlockCallback {
      */
     function _arbitrage(ArbParams memory arb) internal returns (uint256) {
         uint256 mid = _swap(arb.tokenIn,  arb.tokenOut, arb.fee0, arb.flashAmount, 0);
-        return  _swap(arb.tokenOut, arb.tokenIn,  arb.fee1, mid,            0);
+        return  _swap(arb.tokenOut, arb.tokenIn, arb.fee1, mid, 0);
     }
 
     function _swap(
@@ -303,6 +307,7 @@ contract FlashArbLeverage is IUnlockCallback {
 // Currency is an address wrapper used by Uniswap V4 (address(0) = native ETH)
 type Currency is address;
 
+// CurrencyLibrary mirrors the Uniswap V4 helper; kept for ABI/interface compatibility.
 library CurrencyLibrary {
     function unwrap(Currency currency) internal pure returns (address) {
         return Currency.unwrap(currency);
