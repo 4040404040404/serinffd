@@ -1,0 +1,17 @@
+[profile.default]
+src     = "."
+out     = "out"
+libs    = ["lib"]
+test    = "test"
+script  = "script"
+solc    = "0.8.26"
+optimizer       = true
+optimizer_runs  = 1_000_000
+via_ir          = true
+
+# Mainnet fork — set ETH_RPC_URL in .env before running tests
+[rpc_endpoints]
+mainnet = "${ETH_RPC_URL}"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
