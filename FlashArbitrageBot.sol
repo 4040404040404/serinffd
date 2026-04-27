@@ -7,11 +7,11 @@ import {IAavePool}       from "./interfaces/IAavePool.sol";
 // ─── Uniswap V4 constants ───────────────────────────────────────────────────
 address constant POOL_MANAGER_ADDR = 0x000000000004444c5dc75cB358380D2e3dE08A90;
 
-// ─── Aave V3 on Ethereum mainnet ────────────────────────────────────────────
-address constant AAVE_POOL_ADDR = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;
+// ─── Aave V3 on Sepolia testnet ─────────────────────────────────────────────
+address constant AAVE_POOL_ADDR = 0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951;
 
-// ─── Uniswap V3 SwapRouter02 ────────────────────────────────────────────────
-address constant SWAP_ROUTER_02 = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+// ─── Uniswap V3 SwapRouter02 on Sepolia ─────────────────────────────────────
+address constant SWAP_ROUTER_02 = 0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E;
 
 // ─── Sqrt price limits ──────────────────────────────────────────────────────
 uint160 constant MIN_SQRT_PRICE = 4295128739;

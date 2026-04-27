@@ -137,7 +137,7 @@ Total capital deployed ≈ `flashAmount × 1 / (1 − LTV)`.
 | [Foundry](https://book.getfoundry.sh/getting-started/installation) | latest | Compile & test Solidity |
 | [Node.js](https://nodejs.org) | ≥ 18 | Run keeper.js |
 | [npm](https://www.npmjs.com/) | ≥ 9 | Install JS dependencies |
-| Ethereum mainnet RPC | — | Alchemy / Infura / local Anvil fork |
+| Ethereum Sepolia RPC | — | Alchemy / Infura / local Anvil fork |
 
 ---
 
@@ -184,7 +184,7 @@ npm install ethers
 Copy and fill in the values before running the bot:
 
 ```bash
-export ETH_RPC_URL="https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY"
+export ETH_RPC_URL="https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY"
 export BOT_PRIVATE_KEY="0xYOUR_PRIVATE_KEY"
 export BOT_CONTRACT="0xYOUR_DEPLOYED_CONTRACT_ADDRESS"
 export MAX_GAS_GWEI="50"      # optional — default 50
@@ -273,7 +273,7 @@ All pairs within the same block are processed with `Promise.all` (parallel). Pro
 The test manufactures an arbitrage opportunity by dumping 500 WETH into the DAI/WETH 0.3 % pool (imbalancing it relative to the 0.05 % pool), then calls `executeArbitrage` and asserts profit > 0.
 
 ```bash
-# Run all tests against mainnet fork
+# Run all tests against Sepolia fork
 forge test \
   --fork-url "$ETH_RPC_URL" \
   --match-path "test/FlashArbitrageBot.t.sol" \
@@ -290,21 +290,24 @@ forge test \
 
 ---
 
-## 10. Key Addresses (Ethereum Mainnet)
+## 10. Key Addresses (Sepolia Testnet)
 
 | Contract | Address |
 |----------|---------|
 | Uniswap V4 PoolManager | `0x000000000004444c5dc75cB358380D2e3dE08A90` |
-| Uniswap V3 SwapRouter02 | `0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45` |
-| Uniswap V3 QuoterV2 | `0x61fFE014bA17989E743c5F6cB21bF9697530B21e` |
-| Aave V3 Pool | `0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2` |
-| WETH | `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2` |
-| DAI | `0x6B175474E89094C44Da98b954EedeAC495271d0F` |
-| USDC | `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` |
-| DAI/WETH 0.3 % pool | `0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8` |
-| DAI/WETH 0.05 % pool | `0x60594a405d53811d3BC4766596EFD80fd545A270` |
-| USDC/WETH 0.05 % pool | `0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640` |
-| USDC/WETH 0.3 % pool | `0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D5` |
+| Uniswap V3 SwapRouter02 | `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E` |
+| Uniswap V3 QuoterV2 | `0xEd1f6473345F45b75833fd55D191EF35014f8154` |
+| Uniswap V3 Factory | `0x0227628f3F023bb0B980b67D528571c95c6DaC1c` |
+| Aave V3 Pool | `0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951` |
+| WETH | `0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c` |
+| DAI | `0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357` |
+| USDC | `0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8` |
+| DAI/WETH 0.3 % pool | `0xBBF6c012b8AC4f749a5ED809833e866F152F513f` |
+| DAI/WETH 0.05 % pool | `0x3861aB2609010f2275646f52Ed88C7ED91377890` |
+| USDC/WETH 0.05 % pool | `0xd37AC323adF2B42ACde752e765feb586Fa9B450F` |
+| USDC/WETH 0.3 % pool | `0x949C25aBE36588EddD6DFA964667c2Db266C43D5` |
+
+> Pool addresses are computed deterministically via CREATE2 from the Sepolia factory. Deploy and seed liquidity with the Uniswap V3 interface if they have not yet been initialised.
 
 ---
 

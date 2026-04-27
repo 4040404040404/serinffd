@@ -14,7 +14,7 @@
  *   ETH_RPC_URL=https://... BOT_PRIVATE_KEY=0x... BOT_CONTRACT=0x... node keeper.js
  *
  * Environment variables:
- *   ETH_RPC_URL      — Ethereum mainnet JSON-RPC URL (e.g. Infura / Alchemy)
+ *   ETH_RPC_URL      — Sepolia testnet JSON-RPC URL (e.g. Infura / Alchemy)
  *   BOT_PRIVATE_KEY  — Private key of the wallet that deploys / calls the bot
  *   BOT_CONTRACT     — Deployed FlashArbitrageBot contract address
  *   MAX_GAS_GWEI     — (optional) Maximum gas price in Gwei to accept (default: 50)
@@ -42,15 +42,15 @@ if (!RPC_URL || !PRIVATE_KEY || !BOT_ADDRESS) {
 
 // ─── Addresses ───────────────────────────────────────────────────────────────
 
-const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-const DAI  = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
-const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const WETH = "0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c"; // Sepolia WETH (Aave-wrapped)
+const DAI  = "0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357"; // Sepolia DAI
+const USDC = "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8"; // Sepolia USDC
 
-const QUOTER_V2     = "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"; // Uniswap V3 QuoterV2 mainnet
-const DAI_WETH_3000 = "0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8";
-const DAI_WETH_500  = "0x60594a405d53811d3BC4766596EFD80fd545A270";
-const USDC_WETH_500 = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640";
-const USDC_WETH_3000= "0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D5";
+const QUOTER_V2     = "0xEd1f6473345F45b75833fd55D191EF35014f8154"; // Uniswap V3 QuoterV2 Sepolia
+const DAI_WETH_3000 = "0xBBF6c012b8AC4f749a5ED809833e866F152F513f"; // DAI/WETH 0.3 % Sepolia
+const DAI_WETH_500  = "0x3861aB2609010f2275646f52Ed88C7ED91377890"; // DAI/WETH 0.05% Sepolia
+const USDC_WETH_500 = "0xd37AC323adF2B42ACde752e765feb586Fa9B450F"; // USDC/WETH 0.05% Sepolia
+const USDC_WETH_3000= "0x949C25aBE36588EddD6DFA964667c2Db266C43D5"; // USDC/WETH 0.3 % Sepolia
 
 // ─── ABI fragments ───────────────────────────────────────────────────────────
 
@@ -278,7 +278,7 @@ async function onBlock(blockNumber) {
   console.log(`  Max gas      : ${MAX_GAS_GWEI} Gwei`);
   console.log(`  Log file     : ${LOG_FILE}\n`);
 
-  // Subscribe to new blocks (fires approx. every 12 s on mainnet)
+  // Subscribe to new blocks (fires approx. every 12 s on Sepolia)
   provider.on("block", onBlock);
 
   // Also fire on a 1-second interval for faster reaction on L2 / custom chains

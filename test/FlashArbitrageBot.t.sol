@@ -4,22 +4,22 @@ pragma solidity ^0.8.26;
 import {Test, console2} from "forge-std/Test.sol";
 
 // ─── Addresses ───────────────────────────────────────────────────────────────
-address constant WETH      = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-address constant DAI       = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-address constant USDC      = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+address constant WETH      = 0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c; // Sepolia
+address constant DAI       = 0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357; // Sepolia
+address constant USDC      = 0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8; // Sepolia
 
-// Uniswap V3 pools
-address constant DAI_WETH_3000 = 0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8;
-address constant DAI_WETH_500  = 0x60594a405d53811d3BC4766596EFD80fd545A270;
+// Uniswap V3 pools (Sepolia — computed via CREATE2 from factory 0x0227628f3F023bb0B980b67D528571c95c6DaC1c)
+address constant DAI_WETH_3000 = 0xBBF6c012b8AC4f749a5ED809833e866F152F513f;
+address constant DAI_WETH_500  = 0x3861aB2609010f2275646f52Ed88C7ED91377890;
 
-// Uniswap V4 PoolManager
+// Uniswap V4 PoolManager (deterministic — same address on all chains)
 address constant POOL_MANAGER  = 0x000000000004444c5dc75cB358380D2e3dE08A90;
 
-// Aave V3
-address constant AAVE_POOL     = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;
+// Aave V3 (Sepolia)
+address constant AAVE_POOL     = 0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951;
 
-// Swap router
-address constant SWAP_ROUTER   = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+// Swap router (Uniswap V3 SwapRouter02 Sepolia)
+address constant SWAP_ROUTER   = 0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E;
 
 // ─── Minimal interfaces ───────────────────────────────────────────────────────
 interface IERC20 {
