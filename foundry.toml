@@ -9,9 +9,9 @@ optimizer       = true
 optimizer_runs  = 1_000_000
 via_ir          = true
 
-# Mainnet fork — set ETH_RPC_URL in .env before running tests
+# Sepolia fork — set ETH_RPC_URL in .env before running tests
 [rpc_endpoints]
-mainnet = "${ETH_RPC_URL}"
+sepolia = "${ETH_RPC_URL}"
 
 [etherscan]
-mainnet = { key = "${ETHERSCAN_API_KEY}" }
+sepolia = { key = "${ETHERSCAN_API_KEY}", chain = "sepolia" }

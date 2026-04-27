@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-// Uniswap V4 PoolManager on Ethereum mainnet
-address constant POOL_MANAGER = 0x000000000004444c5dc75cB358380D2e3dE08A90;
-address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+// Uniswap V4 PoolManager on Sepolia testnet
+address constant POOL_MANAGER = 0x8C4BcBE6b9eF47855f97E675296FA3F6fafa5F1A;
+address constant WETH = 0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c;
+address constant USDC = 0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8;
 
 /// @notice Example of swapping on Uniswap V4 using the PoolManager directly
 /// @dev V4 uses a singleton PoolManager with unlock/unlockCallback pattern

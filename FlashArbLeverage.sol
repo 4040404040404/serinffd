@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-// ── Deployed addresses (Ethereum mainnet) ────────────────────────────────────
-address constant POOL_MANAGER       = 0x000000000004444c5dc75cB358380D2e3dE08A90; // Uniswap V4
-address constant SWAP_ROUTER_02     = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45; // Uniswap V3 SwapRouter02
-address constant AAVE_POOL          = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2; // Aave V3 Pool
-address constant AAVE_ADDR_PROVIDER = 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e; // Aave V3 AddressesProvider
+// ── Deployed addresses (Sepolia testnet) ─────────────────────────────────────
+address constant POOL_MANAGER       = 0x8C4BcBE6b9eF47855f97E675296FA3F6fafa5F1A; // Uniswap V4
+address constant SWAP_ROUTER_02     = 0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E; // Uniswap V3 SwapRouter02
+address constant AAVE_POOL          = 0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951; // Aave V3 Pool
+address constant AAVE_ADDR_PROVIDER = 0x012bAC54348C0E635dCAc9D5FB99f06F24136C9A; // Aave V3 AddressesProvider
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 uint256 constant MAX_LEVERAGE_LOOPS = 10;

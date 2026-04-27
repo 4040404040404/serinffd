@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-// Uniswap V4 PoolManager on Ethereum mainnet
-address constant POOL_MANAGER = 0x000000000004444c5dc75cB358380D2e3dE08A90;
+// Uniswap V4 PoolManager on Sepolia testnet
+address constant POOL_MANAGER = 0x8C4BcBE6b9eF47855f97E675296FA3F6fafa5F1A;
 
 /// @notice Example of flash loans on Uniswap V4
 /// @dev V4 flash loans are FREE due to flash accounting - no fees!

@@ -1,6 +1,6 @@
 # FlashArbLeverage
 
-> **Ethereum mainnet** · Uniswap V4 flash loans · Uniswap V3 cross-pool arbitrage · Aave V3 leveraged yield
+> **Sepolia testnet** · Uniswap V4 flash loans · Uniswap V3 cross-pool arbitrage · Aave V3 leveraged yield
 
 A single atomic Solidity contract that:
 
@@ -19,7 +19,7 @@ FlashArbLeverage.sol        ← main contract
 script/
   Deploy.s.sol              ← Foundry broadcast deployment script
 test/
-  FlashArbLeverageTest.t.sol← Foundry mainnet-fork integration tests
+  FlashArbLeverageTest.t.sol← Foundry Sepolia-fork integration tests
 keeper/
   keeper.js                 ← Node.js block-by-block keeper
   package.json
@@ -125,7 +125,7 @@ Open `.env` and fill in:
 
 | Variable | Description |
 |---|---|
-| `ETH_RPC_URL` | Mainnet JSON-RPC endpoint (Alchemy, Infura, etc.) |
+| `ETH_RPC_URL` | Sepolia JSON-RPC endpoint (Alchemy, Infura, etc.) |
 | `PRIVATE_KEY` | Deployer/owner private key (hex, with `0x` prefix) |
 | `ETHERSCAN_API_KEY` | For automatic contract verification |
 | `CONTRACT_ADDRESS` | Fill in after deployment |
@@ -146,9 +146,9 @@ forge build
 
 ---
 
-## Test (mainnet fork)
+## Test (Sepolia fork)
 
-The tests fork Ethereum mainnet and create an artificial price discrepancy to verify the full arbitrage + Aave leverage flow.
+The tests fork Sepolia and create an artificial price discrepancy to verify the full arbitrage + Aave leverage flow.
 
 ```bash
 source .env
@@ -205,8 +205,8 @@ Sample output:
 FlashArbLeverage Keeper starting …
   Contract : 0xabc…
   Wallet   : 0xdef…
-  tokenIn  : 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-  tokenOut : 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+  tokenIn  : 0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8
+  tokenOut : 0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c
   flash    : 1000000000000
   fee0/fee1: 500 / 3000
   Owner check passed ✓
@@ -265,7 +265,7 @@ Or via cast:
 ```bash
 cast send $CONTRACT_ADDRESS \
   "collectYield(address,uint256)" \
-  0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 \
+  0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8 \
   $(cast --to-uint256 $(cast --max-uint 256)) \
   --rpc-url $ETH_RPC_URL \
   --private-key $PRIVATE_KEY
@@ -276,7 +276,7 @@ cast send $CONTRACT_ADDRESS \
 ```bash
 cast send $CONTRACT_ADDRESS \
   "unwindPosition(address)" \
-  0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 \
+  0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8 \
   --rpc-url $ETH_RPC_URL \
   --private-key $PRIVATE_KEY
 ```
@@ -288,23 +288,23 @@ This iteratively repays all Aave debt and withdraws all collateral to the owner 
 ```bash
 cast send $CONTRACT_ADDRESS \
   "rescueTokens(address)" \
-  0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 \
+  0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8 \
   --rpc-url $ETH_RPC_URL \
   --private-key $PRIVATE_KEY
 ```
 
 ---
 
-## Contract addresses (Ethereum mainnet)
+## Contract addresses (Sepolia testnet)
 
 | Contract | Address |
 |---|---|
-| Uniswap V4 PoolManager | `0x000000000004444c5dc75cB358380D2e3dE08A90` |
-| Uniswap V3 SwapRouter02 | `0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45` |
-| Aave V3 Pool | `0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2` |
-| Aave V3 PoolAddressesProvider | `0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e` |
-| WETH | `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2` |
-| USDC | `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` |
+| Uniswap V4 PoolManager | `0x8C4BcBE6b9eF47855f97E675296FA3F6fafa5F1A` |
+| Uniswap V3 SwapRouter02 | `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E` |
+| Aave V3 Pool | `0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951` |
+| Aave V3 PoolAddressesProvider | `0x012bAC54348C0E635dCAc9D5FB99f06F24136C9A` |
+| WETH | `0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c` |
+| USDC | `0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8` |
 
 ---
 

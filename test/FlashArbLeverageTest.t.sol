@@ -4,16 +4,16 @@ pragma solidity ^0.8.26;
 import "forge-std/Test.sol";
 import "../FlashArbLeverage.sol";
 
-// ── Mainnet token addresses ───────────────────────────────────────────────────
-address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+// ── Sepolia token addresses ───────────────────────────────────────────────────
+address constant WETH = 0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c;
+address constant USDC = 0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8;
 
 // Uniswap V3 USDC/WETH pools
 uint24  constant FEE_05  = 500;
 uint24  constant FEE_30  = 3000;
 
 // Aave V3 aToken for USDC (to check supply position)
-address constant A_USDC  = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
+address constant A_USDC  = 0x16dA4541aD1807f4443d92D26044C1147406EB80;
 
 interface IAToken {
     function balanceOf(address) external view returns (uint256);
@@ -39,7 +39,7 @@ interface ISwapRouterV3 {
 
 /**
  * @title  FlashArbLeverageTest
- * @notice Mainnet-fork integration tests for FlashArbLeverage.
+ * @notice Sepolia-fork integration tests for FlashArbLeverage.
  *
  * Run:
  *   forge test --fork-url $ETH_RPC_URL -vvvv
@@ -52,7 +52,7 @@ contract FlashArbLeverageTest is Test {
 
     // Uniswap V3 router (same as SWAP_ROUTER_02 in the contract)
     ISwapRouterV3 constant router =
-        ISwapRouterV3(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
+        ISwapRouterV3(0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E);
 
     // Flash loan amount: 500 000 USDC (6 decimals)
     uint256 constant FLASH_AMT = 500_000e6;
